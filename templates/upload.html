@@ -10,7 +10,7 @@
             <h1>Upload Receipt</h1>
         </header>
         <main>
-            <form action=""{{ url_for('upload') }} method="post" enctype="multipart/form-date">
+            <form action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
                 <input type="file" name="file" accept="image/*">
                 <button type="submit">Upload</button>
             </form>
