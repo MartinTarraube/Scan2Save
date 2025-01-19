@@ -7,7 +7,7 @@ import pandas as pd
 excel_file_path = 0
 
 app = Flask(__name__)
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/home/zmchuang/McWics-hackathon/receipt-parser-448216-ad317ae49a0a.json'
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -36,12 +36,9 @@ def upload():
                 parsed_data = parsed_data.strip()
                 
                 price, date, merchant = parsed_data.split(' ', 2)
-                merchant = merchant.strip('"')
-                print(price)
-                print(date)
-                print(merchant)     
+                merchant = merchant.strip('"')            
                 
-                return render_template('result.html', text=parsed_data)
+                return render_template('upload.html', price=price, date=date, merchant=merchant)
             else:
                 raise Exception("File is of wrong type")
                 return redirect(url_for('upload'))
@@ -62,7 +59,7 @@ def parse_with_gemini(text):
     model = genai.GenerativeModel("gemini-1.5-flash")
     prompt = ('Parse this receipt for the following categories'
         ' and their values: "total", "date", "merchant"\\n'
-        'The format of your respon should be as follows:\\n'
+        'The format of your response should be as follows:\\n'
         'price date merchant'
         '\\nThis means that the ONLY TEXT I want you to provide'
         ' is the value of the price, the date, and the merchant.'
