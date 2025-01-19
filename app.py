@@ -28,7 +28,7 @@ def upload():
             file = request.files['file']
             if file.filename.endswith(('.xlsx', '.xls')):
                 EXCEL_FILE = file.filename
-                file_path = os.path.join('uploads', file.filename)
+                file_path = os.path.join('/mnt/c/Users/zmchu/hackathon1', file.filename)
                 file.save(file_path)
                 print('Excel file uploaded.')     
                 return jsonify({'success': True})
@@ -68,12 +68,13 @@ def finalize():
     rows = []
     for key in data:
         if key.startswith('date-'):
-            index = key.split('-')[1]
-            price = data[key]
-            date = data[f'price-{index}']
-            merchant = data[f'merchant-{index}']
-            rows.append([date, price, merchant])
+            # index = key.split('-')[1]
+            # price = data[key]
+            # date = data[f'price-{index}']
+            # merchant = data[f'merchant-{index}']
+            rows.append([data.date, data.price, data.merchant])
     append_to_excel(rows)
+    
     return redirect(url_for('home'))
 
 @app.route('/create_excel', methods=['POST'])
@@ -90,7 +91,7 @@ def create_excel():
     global EXCEL_FILE
     EXCEL_FILE = file_path
 
-    return jsonify({'success': True, 'message': 'Excel file created successfully'})
+    return jsonify({'success': True, 'message': 'Excel file created successfully', 'filePath': file_path})
 
 
 def parse_receipt(file_path):
@@ -120,40 +121,14 @@ def parse_with_gemini(text):
     return response.text
 
 def append_to_excel(rows):
-    new_data = pd.DataFrame(rows, columns=['Date', 'Date', 'Merchant'])
+    new_data = pd.DataFrame(rows, columns=['Date', 'Price', 'Merchant'])
     if os.path.exists(EXCEL_FILE):
         df = pd.read_excel(EXCEL_FILE)
         df = pd.concat([df, new_data], ignore_index=True)
     else:
         df = new_data
+    print(df)
     df.to_excel(EXCEL_FILE, index=False)
-
-def modify_excel_price(prix, the_path):
-    df = pd.read_excel(the_path)
-
-    #add new value to end of 2nd column
-    df.loc[len(df), df.columns[1]] = prix
-    total_sum = df.iloc[:, 1].sum()
-    df.to_excel(the_path, index=False)
-    return total_sum
-
-def modify_excel_date(date, the_path):
-    df = pd.read_excel(the_path)
-
-    #add new value to end of 2nd column
-    df.loc[len(df), df.columns[0]] = date
-    
-    df.to_excel(the_path, index=False)
-    return 
-
-def modify_excel_merchant(merchant, the_path):
-    df = pd.read_excel(the_path)
-
-    #add new value to end of 2nd column
-    df.loc[len(df), df.columns[2]] = merchant
-    
-    df.to_excel(the_path, index=False)
-    return
 
 
 

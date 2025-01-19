@@ -205,8 +205,9 @@
             function handleFileChange(event) {
                 const file = event.target.files[0];
                 console.log('File selected: ', file);
+                
             }
-            function createNewExcelFile() {
+            function createNewExcelFile() {                
                 const fileName = document.getElementById('newExcelFileName').value;
                 if (fileName) {
                     fetch('/create_excel', {
@@ -219,7 +220,13 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            alert('Excel file created sucessfully');                        
+                            alert('Excel file created sucessfully');  
+                            const fileInput = document.getElementById('excelFile');
+                            const dataTransfer = new DataTransfer();
+                            const file = new File([], data.filePath);
+                            dataTransfer.items.add(file);
+                            fileInput.files = dataTransfer.files;                            
+                            nextStep();                 
                         } else {
                             alert('Error: ' + data.message);
                         }
