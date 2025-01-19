@@ -19,22 +19,25 @@
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-body">
-                        <h1 class="text-center mb-4">Upload Expenses</h1>                                            
+                        <h1 class="text-center mb-4">Upload Expenses</h1>      
+
                         <form id="multiStepForm" action="/upload" method="POST" enctype="multipart/form-data">
-                            <div class="step active">
+                            <!--step 1-->
+                            <div class="step active" id="step1">
                                 <h2>Upload Excel File</h2>
                                 <div class="my-4 form-group">                                    
                                     <input type="file" id="excelFile" class="form-control-file" name="file" accept=".xlsx,.xls">
                                 </div>
                                 <div class="row">
-                                    <button type="button" class="col-6 text-center mx-auto btn btn-primary btn-block" onclick="nextStep()">Next</button>
+                                    <button type="button" class="col-6 text-center mx-auto btn btn-primary btn-block" onclick="submitStep('step1')">Next</button>
                                 </div>
                             </div>
-                            <div class="step">
+                            <!--step 2-->
+                            <div class="step" id="step2">
                                 <h2>Upload Image of Receipt</h2>
                                 <div class="row">
                                     <div class="my-3 col-6 form-group">
-                                        <input type="file" class="form-control-file" name="file" accept="image/*">
+                                        <input type="file" class="form-control-file" name="imageFile" accept="image/*">
                                     </div>                                    
                                     <button type="button" class="col-6 btn" onclick="addReceipt()">Add Another Receipt</button>
                                 </div>
@@ -47,39 +50,25 @@
                                         <button type="button" class="btn btn-secondary btn-block" onclick="prevStep()">Back</button>
                                     </div>
                                     <div class="col-6">
-                                        <button type="button" class="btn btn-primary btn-block" onclick="nextStep()">Next</button>                                
+                                        <button type="button" class="btn btn-primary btn-block" onclick="submitStep('step2')">Next</button>                                
                                     </div>
                                 </div>
                             </div>
-                            <div class="step">
+                            <!--step 3-->
+                            <div class="step" id="step3">
                                 <h2>Review, Make Changes, and Submit</h2>
                                 <div class="row">
-                                    <div class="col-4 form-group">
-                                        <label for="date">Date</label>
-                                        <input type="date" class="form-control" id="date" name="date" value="{{ date }}">
-                                    </div>
-                                    <div class="col-4 form-group">
-                                        <label for="price">Price</label>
-                                        <input type="text" class="form-control" id="price" name="price" value="{{ price  }}">
-                                    </div>
-                                    <div class="col-4 form-group">
-                                        <label for="merchant">Merchant</label>
-                                        <input type="text" class="form-control" id="merchant" name="merchant" value="{{ merchant }}">
+                                    <div class="col-12">
+                                        <h3>Receipt Summary</h3>
+                                        <div id="receiptSummary"></div>
                                     </div>
                                 </div>
-
                                 <div class="row">
-                                    <div class="col-6 form-group" id="receiptList"></div>
-                                </div>  
-
-                                
-
-                                <div class="row">                                    
                                     <div class="col-6">
                                         <button type="button" class="btn btn-secondary btn-block" onclick="prevStep()">Back</button>
                                     </div>
                                     <div class="col-6">
-                                        <button type="submit" class="btn btn-block btn-success">Submit</button>
+                                        <button type="button" class="btn btn-block btn-success" onclick="submitStep('step3')">Submit</button>
                                     </div>
                                 </div>
                             </div>
@@ -109,7 +98,7 @@
                 if (currentStep < steps.length - 1) {
                     currentStep++;
                     showStep(currentStep);
-                }
+                }           
             }
             function prevStep() {
                 if (currentStep > 0) {
@@ -118,18 +107,47 @@
                 }
             }
             function addReceipt() {
-                numReciepts++;
+                const addedR = document.createElement('div');
+                addedR.innerHTML = `
+                    <input type="file" class="mb-3 form-control-file" name="file" accept="image/*">
+                `;                
+                document.getElementById("additionalReceipts").appendChild(addedR);
+            }
+            function submitStep(stepId) {
+                const formData = new FormData(document.getElementById('multiStepForm'));
+                fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayData(data);
+                        nextStep();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+            function displayData(data) {
+                const receiptSummary = document.getElementById('receiptSummary');
+                receiptSummary.innerHTML = `
+                
 
-                var newReceipt = document.createElement('div');
-                newReceipt.className = 'form-group mb-3'                        
-                newReceipt.innerHTML = '<input type="file" class="form-control-file" name="file" accept="image/*">';
-                document.getElementById('additionalReceipts').appendChild(newReceipt);
-                document.getElementById('extraSpace').appendChild(document.createElement());
-            }    
+
+                <p><strong>Date:</strong> ${data.date}</p>
+                <p><strong>Price:</strong> ${data.price}</p>                
+                <p><strong>Merchant:</strong> ${data.merchant}</p>
+                `;
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                showStep(currentStep);
+            });
+ 
         </script>
     </footer>
-    {% if total_sum is not none %}
-    <h2>Total Sum of Second Column : {{ total_sum }}</h2>
-    {% endif %}
+    
 </body>
 </html>

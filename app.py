@@ -1,34 +1,47 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 from google.cloud import vision
 import os
 import google.generativeai as genai
 import pandas as pd
 
-excel_file_path = 0
+excel_file_path = ""
 
 app = Flask(__name__)
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+api_key = os.getenv('GEMINI_API_KEY')
 @app.route('/')
 def home():
     return render_template('index.html')
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
+    global excel_file_path
+    if request.method == 'GET':
+        return render_template('upload.html')
     
-
-    if request.method == 'POST':
-        if 'file' not in request.files: 
-            raise Exception("No file part")
-
-        file = request.files['file']
-
-        if excel_file_path == 0:
-            detect_excel(file)
-        
-        elif file:
-            if file.content_type.startswith('image/'):
+    if 'file' not in request.files and 'imageFile' not in request.files:            
+        return jsonify({'success': False, 'message': 'No file part'})
+    
+    if excel_file_path == "":
+        if 'file' in request.files:
+            file = request.files['file']
+            if file.filename.endswith(('.xlsx', '.xls')):
+                excel_file_path = file.filename
                 file_path = os.path.join('uploads', file.filename)
                 file.save(file_path)
+                print('Excel file uploaded.')     
+                return jsonify({'success': True})
+            else:
+                return jsonify({'success': False, 'message': 'File is not an Excel'})
+        else:
+            return jsonify({'success': False, 'message': 'No excel file part'})
+    else:
+        if 'imageFile' in request.files:
+            file = request.files['imageFile']            
+            if file.content_type.startswith('image/') or file.filename.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff')):
+                file_path = os.path.join('uploads', file.filename)
+                file.save(file_path)
+                print('Image file uploaded.')
 
                 text = parse_receipt(file_path)
                 parsed_data = parse_with_gemini(text)
@@ -36,13 +49,18 @@ def upload():
                 parsed_data = parsed_data.strip()
                 
                 price, date, merchant = parsed_data.split(' ', 2)
-                merchant = merchant.strip('"')            
+                merchant = merchant.strip('"')
+                print(price)
+                print(date)
+                print(merchant)
                 
-                return render_template('upload.html', price=price, date=date, merchant=merchant)
+                return jsonify({'success': True, 'price': price, 'date': date, 'merchant': merchant})
             else:
-                raise Exception("File is of wrong type")
-                return redirect(url_for('upload'))
-    return render_template('upload.html', text=None)
+                return jsonify({'success': False, 'message': 'File is of wrong type'})
+        else: 
+            return jsonify({'success': False, 'message': 'No image file part'})
+    return jsonify({'success': False, 'message': 'Unknown error'})
+
 
 def parse_receipt(file_path):
     client = vision.ImageAnnotatorClient()
@@ -55,7 +73,7 @@ def parse_receipt(file_path):
     return texts[0].description if texts else 'no text'
 
 def parse_with_gemini(text):
-    genai.configure(api_key = os.getenv('GEMINI_API_KEY'))
+    genai.configure(api_key)
     model = genai.GenerativeModel("gemini-1.5-flash")
     prompt = ('Parse this receipt for the following categories'
         ' and their values: "total", "date", "merchant"\\n'
@@ -97,10 +115,7 @@ def modify_excel_merchant(merchant, the_path):
     df.to_excel(the_path, index=False)
     return
 
-def detect_excel(file):
-    if file and file.filename.endswith(('.xlsx', '.xls')):
-        excel_file_path = file
-    return
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
